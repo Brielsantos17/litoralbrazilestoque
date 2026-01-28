@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Litoral Brasil Concha - ERP Cloud</title>
+    <style>
+        :root {
+            --primary: #005691;
+            --primary-dark: #004472;
+            --gold: #fbc02d;
+            --bg: #f4f6f9;
+            --white: #ffffff;
+            --text: #333333;
+            --sidebar-width: 260px;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --info: #3498db;
+            --pink: #e84393;
+            --purple: #8e44ad;
+            --warning: #f39c12;
+        }
+
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* --- SIDEBAR (Desktop) --- */
+        .sidebar {
+            width: var(--sidebar-width); background: var(--primary); color: white;
+            display: flex; flex-direction: column; height: 100vh;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 10; transition: 0.3s;
+        }
+        .brand { padding: 20px; text-align: center; background: var(--primary-dark); border-bottom: 3px solid var(--gold); }
+        .brand img { height: 50px; display: block; margin: 0 auto 10px; }
+        .nav-links { flex: 1; padding-top: 20px; display: flex; flex-direction: column; gap: 5px; }
+        .nav-btn {
+            background: transparent; border: none; color: rgba(255,255,255,0.8);
+            padding: 15px 25px; text-align: left; font-size: 1rem; cursor: pointer;
+            transition: 0.2s; display: flex; align-items: center; gap: 15px;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.1); color: white; padding-left: 30px; }
+        .nav-btn.active { background: var(--white); color: var(--primary); font-weight: bold; border-right: 5px solid var(--gold); }
+        .nav-btn span { font-size: 1.2rem; width: 25px; text-align: center; }
+        .user-panel { padding: 20px; background: rgba(0,0,0,0.1); font-size: 0.9rem; text-align: center; }
+
+        /* --- CONTEÚDO PRINCIPAL --- */
+        .main-content {
+            flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; position: relative;
+        }
+        .top-bar {
+            background: var(--white); height: 60px; display: flex; align-items: center;
+            justify-content: space-between; padding: 0 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-shrink: 0;
+        }
+        .view-container { flex: 1; padding: 30px; overflow-y: auto; padding-bottom: 100px; /* Espaço pro mobile */ }
+        .view-section { display: none; animation: fadeEffect 0.3s; }
+        .view-section.active { display: block; }
+        @keyframes fadeEffect { from {opacity: 0; transform: translateY(10px);} to {opacity: 1; transform: translateY(0);} }
+
+        /* --- ESTILOS DE PDV --- */
+        .products-panel { display: flex; flex-direction: column; gap: 15px; }
+        .filters-bar {
+            display: flex; gap: 10px; flex-wrap: wrap; background: white; padding: 15px;
+            border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+        .product-card {
+            background: white; border-radius: 8px; padding: 10px; text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s;
+            border: 1px solid transparent; position: relative;
+        }
+        .product-card:active { transform: scale(0.98); }
+        .product-card img { width: 100%; height: 160px; object-fit: cover; border-radius: 5px; background: #eee; }
+        .size-badge {
+            position: absolute; top: 10px; right: 10px; background: var(--primary); color: white;
+            width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem;
+        }
+
+        /* --- FLUTUANTES --- */
+        .shell-cart-btn {
+            position: fixed; bottom: 30px; right: 30px; width: 70px; height: 70px;
+            background: var(--gold); border-radius: 50%; box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            cursor: pointer; z-index: 900; display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s; border: 4px solid white;
+        }
+        .shell-cart-btn:active { transform: scale(0.9); }
+        .shell-icon { width: 40px; height: 40px; fill: var(--primary); }
+        .cart-badge {
+            position: absolute; top: -5px; right: -5px; background: var(--danger); color: white;
+            width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 0.8rem; border: 2px solid white;
+        }
+
+        /* --- GAVETA CARRINHO --- */
+        .cart-drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 998; display: none; }
+        .cart-drawer {
+            position: fixed; top: 0; right: -450px; width: 400px; height: 100%;
+            background: white; z-index: 999; box-shadow: -5px 0 20px rgba(0,0,0,0.1);
+            transition: right 0.3s ease-in-out; display: flex; flex-direction: column;
+        }
+        .cart-drawer.open { right: 0; }
+        .drawer-header { padding: 20px; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; }
+        .drawer-body { flex: 1; overflow-y: auto; padding: 20px; }
+        .drawer-footer { padding: 20px; background: #f9f9f9; border-top: 1px solid #eee; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #eee; }
+        .total-display { font-size: 1.8rem; font-weight: bold; color: var(--primary); text-align: right; margin-bottom: 15px; }
+
+        /* --- ELEMENTOS GERAIS --- */
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); min-width: 600px; /* Garante scroll no mobile */ }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f1f2f6; color: var(--primary); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
+        
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+        .form-card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); max-width: 800px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px; box-sizing: border-box; font-size: 16px; /* Evita zoom no iPhone */ }
+        
+        .btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 0.95rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; width: 100%; font-size: 1.1rem; padding: 15px; }
+        .btn-pink { background: var(--pink); color: white; }
+        .btn-info { background: var(--info); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-dark { background: #34495e; color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-sm { padding: 5px 10px; font-size: 0.85rem; }
+        
+        .btn-filter { background: white; border: 1px solid #ddd; color: #555; border-radius: 20px; padding: 8px 18px; white-space: nowrap; margin-bottom: 5px;}
+        .btn-filter.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-filter-fit.active { background: var(--purple); color: white; border-color: var(--purple); }
+
+        /* --- KPI E MODAIS --- */
+        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .kpi-card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; border-left: 5px solid var(--primary); }
+        .kpi-info h3 { margin: 0; font-size: 0.9rem; color: #777; text-transform: uppercase; }
+        .kpi-info .value { font-size: 2rem; font-weight: bold; color: var(--text); }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .modal-box { background: white; width: 600px; max-width: 90%; padding: 30px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
+
+        /* --- BUILDER --- */
+        .builder-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .b-list { border: 1px solid #eee; height: 300px; overflow-y: auto; border-radius: 6px; padding: 10px; }
+        .b-item { display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #f9f9f9; cursor: pointer; transition: 0.2s; }
+        .b-item:hover { background: #f0f0f0; }
+        .b-item.selected { background: #e1f5fe; border-left: 4px solid var(--primary); }
+
+        .backup-section { background: #fff3cd; border: 1px solid #ffeeba; padding: 20px; border-radius: 8px; margin-top: 30px; }
+        .backup-section h3 { color: #856404; margin-top: 0; }
+
+        /* --- RESPONSIVIDADE MOBILE (AJUSTE FINAL) --- */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            
+            /* Sidebar vira Menu Inferior */
+            .sidebar {
+                position: fixed; bottom: 0; left: 0; width: 100%; height: 60px;
+                flex-direction: row; justify-content: space-around; padding: 0;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            }
+            .brand, .user-panel { display: none; } /* Esconde logo e user panel */
+            .nav-links { flex-direction: row; padding: 0; width: 100%; justify-content: space-around; gap: 0; }
+            .nav-btn { 
+                flex-direction: column; padding: 8px; gap: 2px; border-right: none; 
+                font-size: 0.7rem; justify-content: center; width: 100%;
+            }
+            .nav-btn:hover { padding-left: 8px; } /* Remove efeito hover desktop */
+            .nav-btn.active { border-right: none; border-top: 3px solid var(--gold); color: var(--primary); }
+            .nav-btn span { font-size: 1.4rem; width: auto; }
+            
+            /* Ajustes de Layout */
+            .top-bar { padding: 0 15px; }
+            .view-container { padding: 15px; padding-bottom: 80px; }
+            .kpi-grid { grid-template-columns: 1fr; gap: 10px; }
+            
+            /* Grid de Produtos - 2 Colunas */
+            .product-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .product-card img { height: 140px; }
+            
+            /* Modais Full Screen */
+            .modal-box { width: 95%; max-height: 95vh; padding: 20px; }
+            .builder-grid { grid-template-columns: 1fr; }
+            .b-list { height: 150px; }
+
+            /* Carrinho */
+            .cart-drawer { width: 100%; right: -100%; }
+            .shell-cart-btn { bottom: 70px; right: 20px; width: 60px; height: 60px; }
+        }
+
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="brand">
+        <img src="logo.png" alt="LBC" onerror="this.style.display='none'">
+        <h1>LITORAL BRASIL</h1>
+    </div>
+    <div class="nav-links">
+        <button class="nav-btn active" onclick="switchTab('pdv')" id="btn-pdv"><span>🛒</span> PDV</button>
+        <button class="nav-btn" onclick="switchTab('clientes')" id="btn-clientes"><span>👥</span> Clientes</button>
+        <button class="nav-btn" onclick="switchTab('estoque')" id="btn-estoque"><span>📦</span> Estoque</button>
+        <button class="nav-btn" onclick="switchTab('financeiro')" id="btn-financeiro"><span>💰</span> Finan</button>
+        <button class="nav-btn" onclick="switchTab('cadastro')" id="btn-cadastro"><span>➕</span> Add</button>
+    </div>
+    <div class="user-panel">Admin | <small id="date-display"></small></div>
+</aside>
+
+<div class="main-content">
+    <div class="top-bar">
+        <h3>Litoral Brasil</h3>
+        <button class="btn btn-success btn-sm" style="border-radius:20px;">☁️ Online</button>
+    </div>
+
+    <div class="view-container">
+        
+        <section id="pdv" class="view-section active">
+            <div class="products-panel">
+                <div class="filters-bar">
+                    <button class="btn btn-filter active" onclick="filterPDV('todos', this)">Todos</button>
+                    <button class="btn btn-filter" onclick="filterPDV('Sutiã', this)">Sutiãs</button>
+                    <button class="btn btn-filter" onclick="filterPDV('Calcinha', this)">Calcinhas</button>
+                    <button class="btn btn-filter" onclick="filterPDV('Conjunto', this)">Conjuntos</button>
+                    <div style="border-left: 1px solid #ddd; margin: 0 5px; height: 20px;"></div>
+                    <button class="btn btn-filter btn-filter-fit" onclick="filterPDV('Fit-Top', this)">Top Fit</button>
+                    <button class="btn btn-filter btn-filter-fit" onclick="filterPDV('Fit-Short', this)">Short Fit</button>
+                    <button class="btn btn-filter btn-filter-fit" onclick="filterPDV('Fit-Calça', this)">Legging</button>
+                    <button class="btn btn-filter btn-filter-fit" onclick="filterPDV('Fit-Macacão', this)">Macacão</button>
+                    <button class="btn btn-filter btn-filter-fit" onclick="filterPDV('Fit-Macaquinho', this)">Macaquinho</button>
+                </div>
+                
+                <div style="display:flex; gap:10px; margin: 10px 0;">
+                    <input type="text" id="pdv-search" placeholder="🔍 Buscar..." onkeyup="renderPDV()" style="padding: 12px; border-radius: 30px; border: 1px solid #ddd; outline: none; flex:1;">
+                    <button class="btn btn-pink" onclick="openBuilder()" style="border-radius: 30px;">👙 Montar</button>
+                </div>
+
+                <div id="pdv-grid" class="product-grid"></div>
+            </div>
+        </section>
+
+        <section id="clientes" class="view-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>Clientes</h2>
+                <button class="btn btn-primary" onclick="openModal('modal-cliente')">+ Novo</button>
+            </div>
+            <input type="text" id="search-cli" placeholder="Buscar cliente..." onkeyup="renderCustomers()" style="width: 100%;">
+            <div class="table-responsive">
+                <table style="margin-top: 20px;"><tbody id="table-cli"></tbody></table>
+            </div>
+        </section>
+
+        <section id="estoque" class="view-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>Estoque</h2>
+                <button class="btn btn-primary" onclick="switchTab('cadastro')">+ Novo Item</button>
+            </div>
+            <input type="text" id="stock-search" placeholder="Pesquisar..." onkeyup="renderStock()" style="width: 100%;">
+            <div class="table-responsive">
+                <table style="margin-top: 20px;"><tbody id="table-stock"></tbody></table>
+            </div>
+        </section>
+
+        <section id="financeiro" class="view-section">
+            <h2>Financeiro</h2>
+            <div class="kpi-grid">
+                <div class="kpi-card" style="border-color:var(--success);">
+                    <div class="kpi-info"><h3>Faturamento</h3><div class="value" style="font-size: 1.5rem;">R$ <span id="fin-total">0.00</span></div></div>
+                </div>
+                <div class="kpi-card" style="border-color:var(--info);">
+                    <div class="kpi-info"><h3>Vendas</h3><div class="value" style="font-size: 1.5rem;"><span id="fin-count">0</span></div></div>
+                </div>
+                <div class="kpi-card" style="border-color:var(--purple);">
+                    <div class="kpi-info"><h3>Ticket Médio</h3><div class="value" style="font-size: 1.5rem;">R$ <span id="fin-ticket">0.00</span></div></div>
+                </div>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin:0;">Vendas Recentes</h3>
+                    <button class="btn btn-sm btn-dark" onclick="exportReport()">📄 Baixar TXT</button>
+                </div>
+                <div style="max-height: 300px; overflow-y: auto;" class="table-responsive">
+                    <table><thead><tr><th>Data</th><th>Cliente</th><th>Itens</th><th>Pag</th><th>Valor</th></tr></thead><tbody id="table-sales"></tbody></table>
+                </div>
+            </div>
+        </section>
+
+        <section id="cadastro" class="view-section">
+            <h2>Novo Produto</h2>
+            <div class="form-card">
+                <form onsubmit="saveProduct(event)">
+                    <label>Modelo</label><input type="text" id="cad-name" required>
+                    <div class="form-row">
+                        <div>
+                            <label>Categoria</label>
+                            <select id="cad-type">
+                                <optgroup label="Moda Praia">
+                                    <option value="Sutiã">Sutiã (Biquíni)</option>
+                                    <option value="Calcinha">Calcinha</option>
+                                    <option value="Conjunto">Conjunto</option>
+                                    <option value="Saida">Saída de Praia</option>
+                                </optgroup>
+                                <optgroup label="Fitness">
+                                    <option value="Fit-Top">Top Fit</option>
+                                    <option value="Fit-Short">Short Fit</option>
+                                    <option value="Fit-Calça">Legging</option>
+                                    <option value="Fit-Macacão">Macacão</option>
+                                    <option value="Fit-Macaquinho">Macaquinho</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Tamanho</label>
+                            <select id="cad-size"><option value="P">P</option><option value="M">M</option><option value="G">G</option><option value="GG">GG</option><option value="U">Único</option></select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Preço</label><input type="number" id="cad-price" step="0.01" required></div>
+                        <div><label>Qtd</label><input type="number" id="cad-qty" required></div>
+                    </div>
+                    <label>Foto</label><input type="file" accept="image/*" onchange="processImage(this, 'new')">
+                    <div style="width:100px;height:100px;background:#eee;margin-top:10px;"><img id="cad-preview" style="width:100%;height:100%;object-fit:cover;display:none;"></div>
+                    <button class="btn btn-success" style="margin-top:20px;">SALVAR NA NUVEM</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
+
+<div class="shell-cart-btn" onclick="toggleCartDrawer()">
+    <svg class="shell-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12,2C7.03,2 3,6.03 3,11C3,14.53 5.06,17.59 8.08,19C7.79,19.53 7.6,20.14 7.6,20.8C7.6,22 8.5,23 9.7,23C10.5,23 11.23,22.5 11.6,21.8H12.4C12.77,22.5 13.5,23 14.3,23C15.5,23 16.4,22 16.4,20.8C16.4,20.14 16.21,19.53 15.92,19C18.94,17.59 21,14.53 21,11C21,6.03 16.97,2 12,2M12,4C14.5,4 16.71,5.33 17.92,7.34L12,18L6.08,7.34C7.29,5.33 9.5,4 12,4Z"/>
+    </svg>
+    <div class="cart-badge" id="cart-count">0</div>
+</div>
+
+<div class="cart-drawer-overlay" id="cart-overlay" onclick="toggleCartDrawer()"></div>
+<div class="cart-drawer" id="cart-drawer">
+    <div class="drawer-header">
+        <h3>Carrinho</h3>
+        <button onclick="toggleCartDrawer()" style="background:none;border:none;color:white;font-size:1.5rem;cursor:pointer;">✕</button>
+    </div>
+    <div class="drawer-body" id="cart-list">
+        </div>
+    <div class="drawer-footer">
+        <div class="total-display">R$ <span id="cart-total">0.00</span></div>
+        <button class="btn btn-success" style="width:100%;" onclick="openCheckout()">FINALIZAR</button>
+        <button class="btn btn-danger" style="width:100%; margin-top:10px;" onclick="clearCart()">LIMPAR</button>
+    </div>
+</div>
+
+<div id="modal-checkout" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header"><h3>Pagamento</h3><button class="btn btn-danger btn-sm" onclick="closeModal('modal-checkout')">✕</button></div>
+        <h1 style="text-align:center; color:var(--primary);">R$ <span id="chk-total">0.00</span></h1>
+        <label>Pagamento</label>
+        <select id="chk-method">
+            <option value="Pix">💠 Pix</option><option value="Crédito">💳 Crédito</option><option value="Débito">💳 Débito</option><option value="Dinheiro">💵 Dinheiro</option>
+        </select>
+        <label>Vincular Cliente</label>
+        <input type="text" id="chk-search-cli" placeholder="Buscar..." onkeyup="searchCheckoutClient()">
+        <div id="chk-results" style="border:1px solid #eee;display:none;"></div>
+        <div id="chk-selected-cli" style="background:#e0f2f1;padding:10px;margin-bottom:20px;display:none;"></div>
+        <button class="btn btn-success" style="width:100%;" onclick="finishSale()">CONFIRMAR</button>
+    </div>
+</div>
+
+<div id="modal-builder" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header"><h3>Montar Biquíni</h3><button class="btn btn-danger btn-sm" onclick="closeModal('modal-builder')">✕</button></div>
+        <div class="builder-grid">
+            <div><h4>Top</h4><div id="list-tops" class="b-list"></div></div>
+            <div><h4>Calcinha</h4><div id="list-bottoms" class="b-list"></div></div>
+        </div>
+        <div style="margin-top:20px;display:flex;justify-content:space-between;font-weight:bold;">
+            <div id="build-summary">Selecione...</div>
+            <div style="color:var(--primary);">Total: R$ <span id="build-total">0.00</span></div>
+        </div>
+        <button class="btn btn-pink" style="width:100%;margin-top:15px;" onclick="addComboToCart()">ADICIONAR</button>
+    </div>
+</div>
+
+<div id="modal-edit" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header"><h3>Editar</h3><button class="btn btn-danger btn-sm" onclick="closeModal('modal-edit')">✕</button></div>
+        <form onsubmit="saveEdit(event)">
+            <input type="hidden" id="edit-id">
+            <label>Nome</label><input type="text" id="edit-name" required>
+            <div class="form-row">
+                <div>
+                    <label>Tipo</label>
+                    <select id="edit-type">
+                        <optgroup label="Moda Praia">
+                            <option value="Sutiã">Sutiã</option><option value="Calcinha">Calcinha</option><option value="Conjunto">Conjunto</option><option value="Saida">Saída</option>
+                        </optgroup>
+                        <optgroup label="Fitness">
+                            <option value="Fit-Top">Top Fit</option><option value="Fit-Short">Short Fit</option><option value="Fit-Calça">Legging</option><option value="Fit-Macacão">Macacão</option><option value="Fit-Macaquinho">Macaquinho</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div><label>Preço</label><input type="number" id="edit-price" step="0.01"></div>
+            </div>
+            <div class="form-row">
+                <div><label>Qtd</label><input type="number" id="edit-qty"></div>
+                <div>
+                    <label>Tamanho</label>
+                    <select id="edit-size"><option value="P">P</option><option value="M">M</option><option value="G">G</option><option value="GG">GG</option><option value="U">Único</option></select>
+                </div>
+            </div>
+            <label>Foto</label><input type="file" accept="image/*" onchange="processImage(this, 'edit')">
+            <div style="height:100px;margin-top:10px;"><img id="edit-preview" style="height:100%;"></div>
+            <button class="btn btn-info" style="width:100%;margin-top:20px;">Salvar</button>
+        </form>
+    </div>
+</div>
+
+<div id="modal-cliente" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header"><h3>Novo Cliente</h3><button class="btn btn-danger btn-sm" onclick="closeModal('modal-cliente')">✕</button></div>
+        <form onsubmit="saveCustomer(event)">
+            <label>Nome</label><input type="text" id="cli-name" required>
+            <label>Telefone</label><input type="text" id="cli-phone" required>
+            <button class="btn btn-primary" style="width:100%;">Cadastrar</button>
+        </form>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBotDA6areUMSRrXlSK3phr9DMbq6SD2YE",
+      authDomain: "litoral-brasil-estoque.firebaseapp.com",
+      projectId: "litoral-brasil-estoque",
+      storageBucket: "litoral-brasil-estoque.firebasestorage.app",
+      messagingSenderId: "52560426712",
+      appId: "1:52560426712:web:182ce08d908dcd001ec9ad",
+      measurementId: "G-W3L44XPTHY"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let inventory = [];
+    let customers = [];
+    let salesHistory = [];
+    let cart = [];
+    let tempImg = null;
+    let editImg = null;
+    let selectedTop = null;
+    let selectedBottom = null;
+    let selectedClient = null;
+
+    const NO_IMG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' fill='%23aaa'%3ESem Foto%3C/text%3E%3C/svg%3E";
+
+    window.onload = function() {
+        document.getElementById('date-display').innerText = new Date().toLocaleDateString('pt-BR');
+        
+        db.collection("inventory").onSnapshot((querySnapshot) => {
+            inventory = [];
+            querySnapshot.forEach((doc) => { inventory.push({ ...doc.data(), id: doc.id }); });
+            renderPDV(); renderStock();
+        });
+
+        db.collection("customers").onSnapshot((querySnapshot) => {
+            customers = [];
+            querySnapshot.forEach((doc) => { customers.push({ ...doc.data(), id: doc.id }); });
+            renderCustomers();
+        });
+
+        db.collection("sales").orderBy("timestamp", "desc").limit(50).onSnapshot((querySnapshot) => {
+            salesHistory = [];
+            querySnapshot.forEach((doc) => { salesHistory.push({ ...doc.data(), id: doc.id }); });
+            renderFinancials();
+        });
+    }
+
+    function switchTab(id) {
+        if(id === 'financeiro') { if(prompt("Senha:") !== 'admin') return; }
+        document.querySelectorAll('.view-section').forEach(e => e.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(e => e.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.getElementById('btn-'+id).classList.add('active');
+    }
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+
+    function saveProduct(e) {
+        e.preventDefault();
+        const p = {
+            name: document.getElementById('cad-name').value,
+            type: document.getElementById('cad-type').value,
+            size: document.getElementById('cad-size').value,
+            price: parseFloat(document.getElementById('cad-price').value),
+            qty: parseInt(document.getElementById('cad-qty').value),
+            img: tempImg,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        db.collection("inventory").add(p).then(() => {
+            alert('Salvo!'); e.target.reset(); tempImg = null; document.getElementById('cad-preview').style.display='none';
+        }).catch(err => alert("Erro: " + err));
+    }
+
+    function deleteItem(id) {
+        if(confirm('Apagar da nuvem?')) db.collection("inventory").doc(id).delete();
+    }
+
+    function saveEdit(e) {
+        e.preventDefault();
+        const id = document.getElementById('edit-id').value;
+        const up = {
+            name: document.getElementById('edit-name').value,
+            price: parseFloat(document.getElementById('edit-price').value),
+            qty: parseInt(document.getElementById('edit-qty').value),
+            type: document.getElementById('edit-type').value,
+            size: document.getElementById('edit-size').value
+        };
+        if(editImg) up.img = editImg;
+        db.collection("inventory").doc(id).update(up).then(() => { closeModal('modal-edit'); });
+    }
+
+    function saveCustomer(e) {
+        e.preventDefault();
+        db.collection("customers").add({
+            name: document.getElementById('cli-name').value,
+            phone: document.getElementById('cli-phone').value,
+            cashback: 0
+        }).then(() => { closeModal('modal-cliente'); alert('Salvo!'); });
+    }
+
+    function finishSale() {
+        const batch = db.batch();
+        cart.forEach(c => {
+            const itemRef = db.collection("inventory").doc(c.id);
+            const currentItem = inventory.find(i => i.id === c.id);
+            if(currentItem) batch.update(itemRef, { qty: currentItem.qty - c.cartQty });
+        });
+        const total = parseFloat(document.getElementById('chk-total').innerText);
+        const saleRef = db.collection("sales").doc();
+        batch.set(saleRef, {
+            date: new Date().toLocaleString(),
+            client: selectedClient ? selectedClient.name : 'Avulso',
+            total: total,
+            method: document.getElementById('chk-method').value,
+            items: cart.map(x => x.name).join(', '),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        if(selectedClient) {
+            const cliRef = db.collection("customers").doc(selectedClient.id);
+            batch.update(cliRef, { cashback: (selectedClient.cashback || 0) + (total * 0.02) });
+        }
+        batch.commit().then(() => {
+            alert('Venda Sincronizada!'); clearCart(); closeModal('modal-checkout');
+        }).catch(err => alert("Erro: " + err));
+    }
+
+    // --- EXPORTAR TXT ---
+    function exportReport() {
+        if(salesHistory.length === 0) return alert("Sem dados.");
+        let txt = "====================================\n";
+        txt += "   LITORAL BRASIL - RELATÓRIO DE VENDAS\n";
+        txt += "====================================\n\n";
+        
+        salesHistory.forEach(s => {
+            txt += `DATA: ${s.date}\n`;
+            txt += `CLIENTE: ${s.client}\n`;
+            txt += `PAGAMENTO: ${s.method}\n`;
+            txt += `ITENS: ${s.items}\n`;
+            txt += `VALOR: R$ ${s.total.toFixed(2)}\n`;
+            txt += "------------------------------------\n";
+        });
+
+        const totalGeral = salesHistory.reduce((a,b) => a + b.total, 0);
+        txt += `\n====================================\n`;
+        txt += `TOTAL GERAL: R$ ${totalGeral.toFixed(2)}\n`;
+        txt += `QTD VENDAS: ${salesHistory.length}\n`;
+        txt += `====================================\n`;
+
+        const blob = new Blob([txt], { type: 'text/plain;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a"); link.setAttribute("href", url); link.setAttribute("download", `Relatorio_Litoral_${new Date().toLocaleDateString().replace(/\//g,'-')}.txt`);
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+
+    function processImage(input, mode) {
+        if(input.files[0]) {
+            const r = new FileReader();
+            r.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const c = document.createElement('canvas'); const ctx = c.getContext('2d');
+                    c.width = 300; c.height = (img.height * 300) / img.width;
+                    ctx.drawImage(img, 0, 0, c.width, c.height);
+                    const d = c.toDataURL('image/jpeg', 0.7);
+                    if(mode === 'new') { tempImg = d; document.getElementById('cad-preview').src = d; document.getElementById('cad-preview').style.display = 'block'; }
+                    else { editImg = d; document.getElementById('edit-preview').src = d; }
+                }; img.src = e.target.result;
+            }; r.readAsDataURL(input.files[0]);
+        }
+    }
+
+    let pdvFilter = 'todos';
+    function filterPDV(t, b) {
+        pdvFilter = t;
+        document.querySelectorAll('.btn-filter').forEach(x => x.classList.remove('active'));
+        if(b) b.classList.add('active');
+        renderPDV();
+    }
+
+    function renderPDV() {
+        const grid = document.getElementById('pdv-grid');
+        const term = document.getElementById('pdv-search').value.toLowerCase();
+        grid.innerHTML = '';
+        inventory.filter(i => {
+            let mt = pdvFilter === 'todos' ? true : i.type === pdvFilter;
+            return mt && i.name.toLowerCase().includes(term);
+        }).forEach(i => {
+            const op = i.qty === 0 ? '0.5' : '1';
+            grid.innerHTML += `<div class="product-card" style="opacity:${op}" onclick="addToCart('${i.id}')"><div class="size-badge">${i.size}</div><img src="${i.img || NO_IMG}"><div style="padding:10px;"><div style="font-weight:600;font-size:0.9rem;">${i.name}</div><div style="font-size:0.8rem;color:#777;">${i.type ? i.type.replace('Fit-', '') : ''}</div><div style="color:var(--primary);font-weight:bold;">R$ ${i.price.toFixed(2)}</div></div></div>`;
+        });
+    }
+
+    function addToCart(id) {
+        const item = inventory.find(i => i.id === id);
+        if(item.qty <= 0) return alert('Sem Estoque');
+        const exist = cart.find(c => c.id === id);
+        if(exist) {
+            if(exist.cartQty >= item.qty) return alert('Max Estoque');
+            exist.cartQty++;
+        } else {
+            cart.push({...item, cartQty: 1});
+        }
+        updateCartCount();
+        const btn = document.querySelector('.shell-cart-btn');
+        btn.style.transform = "scale(1.2)"; setTimeout(() => btn.style.transform = "scale(1)", 200);
+    }
+
+    function renderCart() {
+        const div = document.getElementById('cart-list');
+        div.innerHTML = '';
+        let total = 0;
+        cart.forEach((c, idx) => {
+            total += c.price * c.cartQty;
+            div.innerHTML += `<div class="cart-item"><div><strong>${c.name}</strong> <small>(${c.size})</small><br>${c.cartQty}x R$ ${c.price.toFixed(2)}</div><button onclick="remCart(${idx})" style="color:red;border:none;background:none;cursor:pointer;">🗑️</button></div>`;
+        });
+        document.getElementById('cart-total').innerText = total.toFixed(2);
+    }
+    
+    function remCart(idx) { cart.splice(idx, 1); renderCart(); updateCartCount(); }
+    function clearCart() { cart = []; renderCart(); updateCartCount(); }
+    function toggleCartDrawer() {
+        const drawer = document.getElementById('cart-drawer');
+        const overlay = document.getElementById('cart-overlay');
+        if(drawer.classList.contains('open')) { drawer.classList.remove('open'); overlay.style.display = 'none'; }
+        else { drawer.classList.add('open'); overlay.style.display = 'block'; renderCart(); }
+    }
+    function updateCartCount() { document.getElementById('cart-count').innerText = cart.reduce((acc, c) => acc + c.cartQty, 0); }
+
+    function openCheckout() {
+        if(cart.length === 0) return alert('Carrinho vazio');
+        toggleCartDrawer(); 
+        document.getElementById('chk-total').innerText = document.getElementById('cart-total').innerText;
+        selectedClient = null; document.getElementById('chk-results').style.display = 'none'; document.getElementById('chk-selected-cli').style.display = 'none';
+        openModal('modal-checkout');
+    }
+
+    function searchCheckoutClient() {
+        const t = document.getElementById('chk-search-cli').value.toLowerCase();
+        const res = document.getElementById('chk-results');
+        res.innerHTML = '';
+        if(t.length < 2) { res.style.display='none'; return; }
+        res.style.display = 'block';
+        customers.filter(c => c.name.toLowerCase().includes(t)).forEach(c => {
+            res.innerHTML += `<div style="padding:10px;cursor:pointer;" onclick="selectClient('${c.id}')">${c.name}</div>`;
+        });
+    }
+
+    function selectClient(id) {
+        selectedClient = customers.find(c => c.id === id);
+        document.getElementById('chk-selected-cli').innerText = 'Cliente: ' + selectedClient.name;
+        document.getElementById('chk-selected-cli').style.display = 'block';
+        document.getElementById('chk-results').style.display = 'none';
+    }
+
+    function renderStock() {
+        const tb = document.getElementById('table-stock');
+        const t = document.getElementById('stock-search').value.toLowerCase();
+        tb.innerHTML = '';
+        inventory.filter(i => i.name.toLowerCase().includes(t)).forEach(i => {
+            tb.innerHTML += `<tr><td><img src="${i.img || NO_IMG}" style="width:40px;height:40px;"></td><td>${i.name}</td><td>${i.type}</td><td>${i.size}</td><td>R$ ${i.price.toFixed(2)}</td><td>${i.qty}</td><td><button class="btn-sm btn-info" onclick="openEdit('${i.id}')">✏️</button> <button class="btn-sm btn-danger" onclick="deleteItem('${i.id}')">🗑️</button></td></tr>`;
+        });
+    }
+
+    function openEdit(id) {
+        const i = inventory.find(x => x.id === id); if(!i) return;
+        document.getElementById('edit-id').value = i.id; document.getElementById('edit-name').value = i.name;
+        document.getElementById('edit-price').value = i.price; document.getElementById('edit-qty').value = i.qty;
+        document.getElementById('edit-type').value = i.type; document.getElementById('edit-size').value = i.size;
+        editImg = i.img; document.getElementById('edit-preview').src = i.img || NO_IMG;
+        openModal('modal-edit');
+    }
+
+    function renderCustomers() {
+        const tb = document.getElementById('table-cli');
+        const t = document.getElementById('search-cli').value.toLowerCase();
+        tb.innerHTML = '';
+        customers.filter(c => c.name.toLowerCase().includes(t)).forEach(c => {
+            tb.innerHTML += `<tr><td>${c.name}</td><td>${c.phone}</td><td>R$ ${(c.cashback || 0).toFixed(2)}</td><td>-</td></tr>`;
+        });
+    }
+
+    function openBuilder() { selectedTop=null; selectedBottom=null; openModal('modal-builder'); renderBuilder(); updateBuilder(); }
+    function renderBuilder() {
+        const tops = document.getElementById('list-tops'); const bots = document.getElementById('list-bottoms');
+        tops.innerHTML = ''; bots.innerHTML = '';
+        inventory.filter(i => i.type === 'Sutiã' && i.qty > 0).forEach(i => tops.innerHTML += `<div class="b-item" onclick="selBuild('top', '${i.id}', this)"><img src="${i.img || NO_IMG}" style="width:40px;height:40px;margin-right:10px;"> ${i.name} (${i.size})</div>`);
+        inventory.filter(i => i.type === 'Calcinha' && i.qty > 0).forEach(i => bots.innerHTML += `<div class="b-item" onclick="selBuild('bot', '${i.id}', this)"><img src="${i.img || NO_IMG}" style="width:40px;height:40px;margin-right:10px;"> ${i.name} (${i.size})</div>`);
+    }
+    function selBuild(side, id, el) {
+        const i = inventory.find(x => x.id === id);
+        if(side === 'top') selectedTop = i; else selectedBottom = i;
+        el.parentElement.querySelectorAll('.b-item').forEach(x => x.classList.remove('selected'));
+        el.classList.add('selected'); updateBuilder();
+    }
+    function updateBuilder() {
+        let tot = 0; let txt = '';
+        if(selectedTop) { tot += selectedTop.price; txt += `Top: ${selectedTop.name}<br>`; }
+        if(selectedBottom) { tot += selectedBottom.price; txt += `Calcinha: ${selectedBottom.name}`; }
+        document.getElementById('build-summary').innerHTML = txt || 'Selecione...';
+        document.getElementById('build-total').innerText = tot.toFixed(2);
+    }
+    function addComboToCart() { if(selectedTop) addToCart(selectedTop.id); if(selectedBottom) addToCart(selectedBottom.id); closeModal('modal-builder'); }
+
+    function renderFinancials() {
+        const tot = salesHistory.reduce((a, b) => a + b.total, 0);
+        document.getElementById('fin-total').innerText = tot.toFixed(2);
+        document.getElementById('fin-count').innerText = salesHistory.length;
+        const avg = salesHistory.length ? (tot / salesHistory.length) : 0;
+        document.getElementById('fin-ticket').innerText = avg.toFixed(2);
+        const tb = document.getElementById('table-sales'); tb.innerHTML = '';
+        salesHistory.forEach(s => {
+            tb.innerHTML += `<tr><td>${s.date}</td><td>${s.client}</td><td>${s.items ? s.items.substring(0,30) : ''}...</td><td>${s.method}</td><td>R$ ${s.total.toFixed(2)}</td></tr>`;
+        });
+    }
+</script>
+</body>
+</html>
